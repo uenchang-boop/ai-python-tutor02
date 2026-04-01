@@ -277,6 +277,13 @@ with col_output:
         if result["errors"]:
             for err in result["errors"]:
                 st.error(f"⚠️ {err}")
+            st.markdown(
+                '<div style="font-size:13px;font-weight:600;color:#D97706;margin:12px 0 6px;">'
+                '📝 你的程式碼（對照上方錯誤訊息學習）</div>',
+                unsafe_allow_html=True,
+            )
+            st.code(code, language="python", line_numbers=True)
+            st.info("💡 有語法錯誤也沒關係！對照錯誤訊息找到那行，修正後再按「開始分析」。")
             st.session_state.analysis_result   = None
             st.session_state.classes_result     = []
             st.session_state.import_details     = []
