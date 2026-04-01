@@ -191,9 +191,9 @@ def render_function_card(func: dict, explanation: dict, relations: dict):
         # Google AI模式 button
         f'<a href="{_google_url}" target="_blank" rel="noopener noreferrer" '
         f'title="用 Google 搜尋此函數的說明" '
-        f'style="{_btn_base}background:linear-gradient(135deg,#EA4335,#FBBC05,#34A853,#4285F4);'
+        f'style="{_btn_base}background:linear-gradient(135deg,#4285F4,#0F52BA);'
         f'color:#fff;box-shadow:0 1px 4px rgba(66,133,244,0.3);">'
-        f'AI模式</a>'
+        f'Gemini->AI模式</a>'
         f'</span>'
     )
     # ─────────────────────────────────────────────────────────────────────────
