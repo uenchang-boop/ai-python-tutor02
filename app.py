@@ -271,26 +271,38 @@ with col_output:
         reset_session_cost()
         with st.spinner("🔍 正在解析程式碼..."):
             result  = parse_functions(code)
-            classes = parse_classes(code)
-            imports = parse_imports_detail(code)
+            # 若有語法錯誤，用清理後的程式碼讓其他解析器也能正常運作
+            _parse_src = result.get("clean_code") or code
+            classes = parse_classes(_parse_src)
+            imports = parse_imports_detail(_parse_src)
 
+        # 有語法錯誤：先標示，但只要有有效內容就繼續分析
         if result["errors"]:
             for err in result["errors"]:
-                st.error(f"⚠️ {err}")
-            st.code(code, language="python", line_numbers=True)
-            st.caption("這段語法有錯誤歐 ~")
-            st.session_state.analysis_result   = None
-            st.session_state.classes_result     = []
-            st.session_state.import_details     = []
-            st.session_state.call_graph         = {}
-            st.session_state.last_analyzed_code = ""
-        else:
+                st.warning(f"這段語法有錯誤歐 ~ （{err}）")
+
+        _has_content = (
+            result["functions"]
+            or classes
+            or imports
+            or result.get("top_level_code")
+        )
+
+        if _has_content:
             cg = build_call_graph(result["functions"])
             st.session_state.analysis_result    = result
             st.session_state.classes_result     = classes
             st.session_state.import_details     = imports
             st.session_state.call_graph         = cg
             st.session_state.last_analyzed_code = code
+        elif result["errors"]:
+            # 完全無法解析（整份程式碼都是錯誤）
+            st.code(code, language="python", line_numbers=True)
+            st.session_state.analysis_result   = None
+            st.session_state.classes_result     = []
+            st.session_state.import_details     = []
+            st.session_state.call_graph         = {}
+            st.session_state.last_analyzed_code = ""
 
     # ── 顯示結果 ─────────────────────────────────────
     result  = st.session_state.analysis_result

@@ -50,28 +50,78 @@ def _func_end_line(node: ast.FunctionDef | ast.AsyncFunctionDef,
     return getattr(node, "end_lineno", total_lines)
 
 
+# ── 輔助：移除包含錯誤行的頂層區塊 ────────────────────────
+def _remove_bad_block(source_code: str, error_line: int) -> str:
+    """
+    移除包含 error_line 的頂層區塊（def / class / 其他 indent=0 的段落）。
+    回傳去掉該區塊後的程式碼字串。
+    """
+    lines = source_code.splitlines()
+    n = len(lines)
+    if n == 0:
+        return ""
+
+    err_idx = min(error_line - 1, n - 1)  # 0-based
+
+    # 向前找到含錯誤行的頂層起始行（indent == 0 的非空行）
+    start = 0
+    for i in range(err_idx, -1, -1):
+        stripped = lines[i].lstrip()
+        if stripped and len(lines[i]) - len(stripped) == 0:
+            start = i
+            break
+
+    # 向後找到下一個頂層起始行（即本區塊的結束位置）
+    end = n  # exclusive
+    for i in range(start + 1, n):
+        stripped = lines[i].lstrip()
+        if stripped and len(lines[i]) - len(stripped) == 0:
+            end = i
+            break
+
+    return "\n".join(lines[:start] + lines[end:])
+
+
 # ── 主解析器 ────────────────────────────────────────────
 def parse_functions(source_code: str) -> dict:
     """
     解析原始碼，回傳結構化結果。
-    語法錯誤時不 crash，改為回傳友善錯誤訊息。
+    有語法錯誤時自動跳過壞區塊，繼續解析其餘有效部分。
     """
     result: dict[str, Any] = {
         "functions":      [],
         "top_level_code": [],
         "imports":        [],
         "errors":         [],
+        "clean_code":     source_code,   # 去除語法錯誤區塊後的程式碼
     }
 
     if not source_code.strip():
         return result
 
-    # 1. 嘗試解析
+    # 1. 嘗試解析（最多容忍 10 個壞區塊）
+    working = source_code
+    for _ in range(10):
+        try:
+            ast.parse(working)
+            result["clean_code"] = working
+            break                          # 解析成功
+        except SyntaxError as e:
+            result["errors"].append(f"第 {e.lineno} 行有語法錯誤：{e.msg}")
+            cleaned = _remove_bad_block(working, e.lineno)
+            if cleaned == working or not cleaned.strip():
+                result["clean_code"] = ""
+                return result              # 無法繼續，放棄
+            working = cleaned
+        except Exception as e:
+            result["errors"].append(f"解析失敗：{e}")
+            return result
+    else:
+        return result                      # 超過重試上限
+
+    # 2. 用清理後的程式碼正式解析
     try:
-        tree = ast.parse(source_code)
-    except SyntaxError as e:
-        result["errors"].append(f"第 {e.lineno} 行有語法錯誤：{e.msg}")
-        return result
+        tree = ast.parse(working)
     except Exception as e:
         result["errors"].append(f"解析失敗：{e}")
         return result
