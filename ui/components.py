@@ -169,9 +169,10 @@ def render_function_card(func: dict, explanation: dict, relations: dict):
         f"```python\n{_body_snippet}\n```"
     )
     import urllib.parse as _up
-    _encoded_prompt  = _up.quote(_ai_prompt)
-    _chatgpt_url     = f"https://chatgpt.com/?q={_encoded_prompt}"
-    _gemini_url      = f"https://gemini.google.com/app?q={_encoded_prompt}"
+    _encoded_prompt   = _up.quote(_ai_prompt)
+    _encoded_goog     = _up.quote_plus(_ai_prompt)
+    _chatgpt_url      = f"https://chatgpt.com/?q={_encoded_prompt}"
+    _google_url       = f"https://www.google.com/search?q={_encoded_goog}"
 
     _btn_base = (
         "display:inline-flex;align-items:center;gap:3px;"
@@ -187,12 +188,12 @@ def render_function_card(func: dict, explanation: dict, relations: dict):
         f'style="{_btn_base}background:linear-gradient(135deg,#10a37f,#1a7f64);'
         f'color:#fff;box-shadow:0 1px 4px rgba(16,163,127,0.3);">'
         f'ChatGPT</a>'
-        # Gemini button
-        f'<a href="{_gemini_url}" target="_blank" rel="noopener noreferrer" '
-        f'title="在 Gemini 詢問此函數的說明" '
-        f'style="{_btn_base}background:linear-gradient(135deg,#4285F4,#0F52BA);'
+        # Google AI模式 button
+        f'<a href="{_google_url}" target="_blank" rel="noopener noreferrer" '
+        f'title="用 Google 搜尋此函數的說明" '
+        f'style="{_btn_base}background:linear-gradient(135deg,#EA4335,#FBBC05,#34A853,#4285F4);'
         f'color:#fff;box-shadow:0 1px 4px rgba(66,133,244,0.3);">'
-        f'Gemini</a>'
+        f'AI模式</a>'
         f'</span>'
     )
     # ─────────────────────────────────────────────────────────────────────────
