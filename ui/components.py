@@ -294,14 +294,49 @@ def render_function_card(func: dict, explanation: dict, relations: dict, _key_su
         with st.expander(f"📋 查看原始碼 — {name}()", expanded=False):
             st.code(body, language="python")
 
-    # ── 逐行中文注解按鈕 ──────────────────────────────
-    btn_key   = f"annotate_btn_{name}{_key_suffix}"
-    state_key = f"annotate_{name}"   # state key 共用（快取共享）
+    # ── 三個 AI 輔助按鈕 ──────────────────────────────
+    import urllib.parse as _up2
 
-    if st.button("📝 產生逐行中文注解", key=btn_key, type="secondary"):
-        from ai.explainer import generate_line_annotation
-        with st.spinner("AI 正在為每一行加注解..."):
-            st.session_state[state_key] = generate_line_annotation(func)
+    _func_display2 = f"{parent}.{name}" if parent else name
+    _body_snippet2 = (body[:800] + "...") if len(body) > 800 else body
+    _teacher_prompt = (
+        f"你是一個受歡迎的程式設計老師，幫我逐行解說以下程式碼，"
+        f"並舉出有趣、我會有興趣的範例^^~!\n\n"
+        f"函數名稱：{_func_display2}\n\n"
+        f"```python\n{_body_snippet2}\n```"
+    )
+    _enc_chatgpt = _up2.quote(_teacher_prompt)
+    _enc_google  = _up2.quote_plus(_teacher_prompt)
+    _teacher_chatgpt_url = f"https://chatgpt.com/?q={_enc_chatgpt}"
+    _teacher_google_url  = f"https://www.google.com/search?q={_enc_google}"
+
+    btn_key   = f"annotate_btn_{name}{_key_suffix}"
+    state_key = f"annotate_{name}"
+
+    col_a1, col_a2, col_a3 = st.columns(3)
+
+    with col_a1:
+        if st.button("📝 逐行注解(api)", key=btn_key, type="secondary",
+                     use_container_width=True):
+            from ai.explainer import generate_line_annotation
+            with st.spinner("AI 正在為每一行加注解..."):
+                st.session_state[state_key] = generate_line_annotation(func)
+
+    with col_a2:
+        st.link_button(
+            "💬 問ChatGPT",
+            url=_teacher_chatgpt_url,
+            type="secondary",
+            use_container_width=True,
+        )
+
+    with col_a3:
+        st.link_button(
+            "🔍 Gemini→AI模式",
+            url=_teacher_google_url,
+            type="secondary",
+            use_container_width=True,
+        )
 
     if state_key in st.session_state:
         st.code(st.session_state[state_key], language="python")
