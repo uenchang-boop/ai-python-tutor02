@@ -401,7 +401,7 @@ def _offline_template(func_info: dict) -> dict:
 #  第 3 輪新增：類別解釋 & Import 解釋
 # ═══════════════════════════════════════════════════
 
-from ai.prompts import CLASS_EXPLAIN_PROMPT, IMPORT_EXPLAIN_PROMPT
+from ai.prompts import CLASS_EXPLAIN_PROMPT, IMPORT_EXPLAIN_PROMPT, LINE_ANNOTATE_PROMPT
 
 
 def generate_class_explanation(class_info: dict) -> dict:
@@ -553,6 +553,72 @@ def _call_gemini_raw(prompt: str) -> dict:
     _session_cost["api_calls"]     += 1
 
     return _parse_ai_response(response.text.strip())
+
+
+# ── 逐行中文注解 ──────────────────────────────────────
+
+def generate_line_annotation(func_info: dict) -> str:
+    """
+    為函式逐行加上繁體中文注解。
+    回傳帶注解的完整程式碼字串（可直接用 st.code() 顯示）。
+    失敗時回傳原始程式碼（不崩潰）。
+    """
+    global _last_error
+
+    cache  = get_cache()
+    code   = func_info.get("body", "")
+    cache_key = "ANNOTATE:" + code   # 與函式解釋用不同前綴
+
+    # 1. 查快取
+    cached = cache.get(cache_key)
+    if cached:
+        return cached.get("annotated_code", code)
+
+    # 2. 呼叫 AI
+    if _api_ready:
+        try:
+            prompt = LINE_ANNOTATE_PROMPT.replace("{code}", code)
+
+            if _current_provider == "claude":
+                response = _claude_client.messages.create(
+                    model=_current_model,
+                    max_tokens=1200,
+                    messages=[{"role": "user", "content": prompt}],
+                )
+                annotated = response.content[0].text.strip()
+                usage      = response.usage
+                in_tok     = getattr(usage, "input_tokens",  0)
+                out_tok    = getattr(usage, "output_tokens", 0)
+                cost_table = COST_PER_1K.get(_current_model, {"input": 0, "output": 0})
+                usd        = in_tok / 1000 * cost_table["input"] + out_tok / 1000 * cost_table["output"]
+                _session_cost["input_tokens"]  += in_tok
+                _session_cost["output_tokens"] += out_tok
+                _session_cost["total_usd"]     += usd
+                _session_cost["api_calls"]     += 1
+            else:
+                import google.generativeai as genai
+                cfg  = genai.GenerationConfig(temperature=0.2, max_output_tokens=1200)
+                resp = _gemini_model.generate_content(prompt, generation_config=cfg)
+                annotated = resp.text.strip()
+                in_tok     = len(prompt) // 4
+                out_tok    = len(annotated) // 4
+                cost_table = COST_PER_1K.get(_current_model, {"input": 0, "output": 0})
+                usd        = in_tok / 1000 * cost_table["input"] + out_tok / 1000 * cost_table["output"]
+                _session_cost["input_tokens"]  += in_tok
+                _session_cost["output_tokens"] += out_tok
+                _session_cost["total_usd"]     += usd
+                _session_cost["api_calls"]     += 1
+
+            # 存快取
+            cache.set(cache_key, func_info.get("name", "?"),
+                      {"annotated_code": annotated}, api_model=_current_model)
+            return annotated
+
+        except Exception as e:
+            _last_error = str(e)
+
+    # 3. Fallback：回傳原始程式碼
+    return code
 
 
 # ── 類別離線模板 ──────────────────────────────────────

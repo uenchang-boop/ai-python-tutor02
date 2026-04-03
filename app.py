@@ -32,6 +32,7 @@ from visualizer.mermaid_gen import (
     generate_sequence_diagram as mermaid_sequence,
     render_mermaid_html,
 )
+from visualizer.graph_gen import build_call_graph_dot, get_highest_cc_index
 
 
 def _esc(s: str) -> str:
@@ -65,7 +66,7 @@ def render_summary_bar_v4(result: dict):
         )
 
 
-# ── Mermaid 流程圖渲染元件 ─────────────────────────────
+# ── 流程圖渲染元件 ──────────────────────────────────────
 def render_mermaid_section(functions, classes, call_graph):
     standalone = [f for f in functions if not f.get("parent_class")]
     has_call   = bool(standalone and call_graph)
@@ -96,13 +97,41 @@ def render_mermaid_section(functions, classes, call_graph):
         label_visibility="collapsed",
     )
 
+    # ── 函數呼叫流程圖：改用 Graphviz + CC 顏色分級 ──────
+    if selected == "🔗 函數呼叫流程圖":
+        dot_src = build_call_graph_dot(standalone, call_graph)
+        if dot_src:
+            col_graph, col_select = st.columns([3, 1])
+            with col_graph:
+                st.graphviz_chart(dot_src, use_container_width=True)
+            with col_select:
+                func_names  = [f["name"] for f in standalone]
+                default_idx = get_highest_cc_index(standalone)
+                selected_fn = st.radio(
+                    "🔍 選擇函式看解釋",
+                    func_names,
+                    index=default_idx,
+                    key="graph_func_select",
+                )
+                st.caption("🟢 CC≤5 &nbsp; 🟡 CC 6-10 &nbsp; 🔴 CC>10")
+            # 選中函式的解釋卡片
+            selected_func = next(
+                (f for f in standalone if f["name"] == selected_fn), None
+            )
+            if selected_func:
+                from ai.explainer import generate_explanation
+                expl      = generate_explanation(selected_func)
+                relations = call_graph.get(selected_func["name"], {})
+                render_function_card(selected_func, expl, relations)
+        else:
+            st.info("ℹ️ 資料不足，無法產生呼叫圖。")
+        return
+
+    # ── 類別繼承圖 / 執行順序圖：繼續使用 Mermaid ────────
     mermaid_code = ""
     chart_height = 420
 
-    if selected == "🔗 函數呼叫流程圖":
-        mermaid_code = mermaid_call_graph(functions, call_graph)
-        chart_height = max(300, len(standalone) * 60 + 100)
-    elif selected == "🏛️ 類別繼承圖":
+    if selected == "🏛️ 類別繼承圖":
         mermaid_code = mermaid_class_diagram(classes)
         total_methods = sum(len(c.get("methods", [])) for c in classes)
         chart_height = max(300, (len(classes) + total_methods) * 30 + 150)
@@ -115,7 +144,6 @@ def render_mermaid_section(functions, classes, call_graph):
     if mermaid_code:
         html_content = render_mermaid_html(mermaid_code, height=chart_height)
         components.html(html_content, height=chart_height, scrolling=True)
-
         with st.expander("📝 查看 Mermaid 原始語法", expanded=False):
             st.code(mermaid_code, language="text")
     else:
@@ -204,6 +232,10 @@ with col_input:
         st.session_state["call_graph"]           = {}
         st.session_state["last_analyzed_code"]  = ""
         st.session_state["last_cost"]            = None
+        # ISSUE-004: 清除所有注解快取與圖表選擇
+        for _k in list(st.session_state.keys()):
+            if _k.startswith("annotate_") or _k == "graph_func_select":
+                del st.session_state[_k]
 
     code = st.text_area(
         label="code_area",

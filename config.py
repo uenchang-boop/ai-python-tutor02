@@ -22,9 +22,26 @@ GEMINI_MODELS: list[str] = [
 DEFAULT_PROVIDER: str = "claude"
 DEFAULT_MODEL: str    = "claude-sonnet-4-20250514"
 
+# ── RANDY 共享快取設定 ──────────────────────────────────
+# 將此路徑改為你的 RANDY NAS 掛載路徑
+# 例如 Windows: "//RANDY/ai-tutor-cache" 或 "N:/ai-tutor-cache"
+# 設為空字串 "" 則直接使用本地 cache/
+RANDY_CACHE_PATH = "//RANDY/ai-tutor-cache"
+
+
+def _resolve_cache_dir() -> str:
+    """
+    優先使用 RANDY 共享快取；
+    RANDY 離線或路徑不存在時自動 fallback 到本地 cache/。
+    """
+    if RANDY_CACHE_PATH and os.path.exists(RANDY_CACHE_PATH):
+        return RANDY_CACHE_PATH
+    return os.path.join(os.path.dirname(__file__), "cache")
+
+
 # ── 快取設定 ─────────────────────────────────────────
-CACHE_DIR: str      = os.path.join(os.path.dirname(__file__), "cache")
-CACHE_TTL_DAYS: int = 7
+CACHE_DIR: str      = _resolve_cache_dir()
+CACHE_TTL_DAYS: int = 30   # 共享快取保留久一點（原 7 天延長為 30 天）
 
 # ── UI 常數 ──────────────────────────────────────────
 APP_TITLE: str   = "AI Python Code Tutor"

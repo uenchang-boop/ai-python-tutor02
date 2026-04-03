@@ -294,6 +294,19 @@ def render_function_card(func: dict, explanation: dict, relations: dict):
         with st.expander(f"📋 查看原始碼 — {name}()", expanded=False):
             st.code(body, language="python")
 
+    # ── 逐行中文注解按鈕 ──────────────────────────────
+    btn_key   = f"annotate_btn_{name}"
+    state_key = f"annotate_{name}"
+
+    if st.button("📝 產生逐行中文注解", key=btn_key, type="secondary"):
+        from ai.explainer import generate_line_annotation
+        with st.spinner("AI 正在為每一行加注解..."):
+            st.session_state[state_key] = generate_line_annotation(func)
+
+    if state_key in st.session_state:
+        st.code(st.session_state[state_key], language="python")
+        st.caption("💡 可直接複製上方帶注解的程式碼")
+
 
 # ── 頂層程式碼 ────────────────────────────────────────
 def render_top_level_code(top_level: list[dict]):

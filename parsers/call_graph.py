@@ -15,6 +15,32 @@
 import ast
 
 
+# ── Cyclomatic Complexity 計算 ────────────────────────
+
+AST_BRANCH_NODES = (
+    ast.If, ast.For, ast.While, ast.ExceptHandler,
+    ast.With, ast.Assert, ast.comprehension,
+)
+
+
+def calc_cyclomatic_complexity(func_body: str) -> int:
+    """
+    計算 Cyclomatic Complexity（近似值）。
+    基礎分 1，每個分支節點 +1，and/or 各 +1。
+    """
+    try:
+        tree = ast.parse(func_body)
+    except SyntaxError:
+        return 1
+    score = 1
+    for node in ast.walk(tree):
+        if isinstance(node, AST_BRANCH_NODES):
+            score += 1
+        if isinstance(node, ast.BoolOp):          # and / or
+            score += len(node.values) - 1
+    return score
+
+
 def build_call_graph(functions: list[dict]) -> dict[str, dict]:
     """
     輸入：parse_functions() 回傳的 functions 列表
