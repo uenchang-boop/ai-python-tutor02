@@ -103,7 +103,7 @@ def render_mermaid_section(functions, classes, call_graph):
         if dot_src:
             col_graph, col_select = st.columns([3, 1])
             with col_graph:
-                st.graphviz_chart(dot_src, use_container_width=True)
+                st.graphviz_chart(dot_src)
             with col_select:
                 func_names  = [f["name"] for f in standalone]
                 default_idx = get_highest_cc_index(standalone)

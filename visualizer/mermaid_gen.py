@@ -215,17 +215,22 @@ def render_mermaid_html(mermaid_code: str, height: int = 420) -> str:
     <meta charset="UTF-8">
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
     <style>
-        body {{
+        html, body {{
             margin: 0;
-            padding: 16px;
+            padding: 8px 16px;
             background: #FDFCFF;
-            display: flex;
-            justify-content: center;
-            overflow: auto;
+            width: 100%;
+            min-height: {height}px;
+            box-sizing: border-box;
             font-family: 'Noto Sans TC', sans-serif;
         }}
         .mermaid {{
-            max-width: 100%;
+            width: 100%;
+        }}
+        .mermaid svg {{
+            width: 100% !important;
+            max-width: none !important;
+            height: auto !important;
         }}
         .mermaid .nodeLabel {{
             font-size: 13px;
@@ -240,6 +245,7 @@ def render_mermaid_html(mermaid_code: str, height: int = 420) -> str:
         mermaid.initialize({{
             startOnLoad: true,
             theme: 'base',
+            useMaxWidth: true,
             themeVariables: {{
                 primaryColor: '#FEF3C7',
                 primaryBorderColor: '#D97706',
