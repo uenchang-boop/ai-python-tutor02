@@ -122,7 +122,7 @@ def render_mermaid_section(functions, classes, call_graph):
                 from ai.explainer import generate_explanation
                 expl      = generate_explanation(selected_func)
                 relations = call_graph.get(selected_func["name"], {})
-                render_function_card(selected_func, expl, relations)
+                render_function_card(selected_func, expl, relations, _key_suffix="_graph")
         else:
             st.info("ℹ️ 資料不足，無法產生呼叫圖。")
         return
@@ -137,9 +137,9 @@ def render_mermaid_section(functions, classes, call_graph):
         chart_height = max(300, (len(classes) + total_methods) * 30 + 150)
     elif selected == "⏱️ 執行順序圖":
         mermaid_code = mermaid_sequence(functions, call_graph)
-        chart_height = max(350, len(standalone) * 80 + 100)
+        chart_height = max(500, len(standalone) * 120 + 150)
 
-    chart_height = min(chart_height, 800)
+    chart_height = min(chart_height, 1200)
 
     if mermaid_code:
         html_content = render_mermaid_html(mermaid_code, height=chart_height)

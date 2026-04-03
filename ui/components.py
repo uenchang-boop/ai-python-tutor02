@@ -122,7 +122,7 @@ def _complexity_badge(complexity: str) -> str:
 
 
 # ── 函數卡片 ──────────────────────────────────────────
-def render_function_card(func: dict, explanation: dict, relations: dict):
+def render_function_card(func: dict, explanation: dict, relations: dict, _key_suffix: str = ""):
     name       = func["name"]
     params     = func.get("params", [])
     is_async   = func.get("is_async", False)
@@ -295,8 +295,8 @@ def render_function_card(func: dict, explanation: dict, relations: dict):
             st.code(body, language="python")
 
     # ── 逐行中文注解按鈕 ──────────────────────────────
-    btn_key   = f"annotate_btn_{name}"
-    state_key = f"annotate_{name}"
+    btn_key   = f"annotate_btn_{name}{_key_suffix}"
+    state_key = f"annotate_{name}"   # state key 共用（快取共享）
 
     if st.button("📝 產生逐行中文注解", key=btn_key, type="secondary"):
         from ai.explainer import generate_line_annotation
